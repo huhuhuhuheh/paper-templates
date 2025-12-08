@@ -1,4 +1,4 @@
-# Paper Plugin Template
+# Paper Plugin Templates
 
 Basic Paper Plugin generator with nothing apart from the files, no sort of bloat
 
