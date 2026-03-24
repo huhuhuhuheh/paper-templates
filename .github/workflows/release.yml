@@ -25,7 +25,9 @@ jobs:
           VER=$(echo $TAG | sed 's/^v//')
           
           JAVA_VER=8
-          if [[ $(echo -e "$VER\n1.20.5" | sort -V | head -n1) == "1.20.5" ]]; then
+          if [[ $(echo -e "$VER\n26.1" | sort -V | head -n1) == "26.1" ]]; then
+            JAVA_VER=25
+          elif [[ $(echo -e "$VER\n1.20.5" | sort -V | head -n1) == "1.20.5" ]]; then
             JAVA_VER=21
           elif [[ $(echo -e "$VER\n1.18" | sort -V | head -n1) == "1.18" ]]; then
             JAVA_VER=17
