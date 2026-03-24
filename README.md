@@ -36,3 +36,16 @@ java {
     }
 }
 ```
+
+# To fork and build your versions
+First fork the repo, then depending on what you choose, it would be easy or not
+
+## Github Actions
+Nothing is required, as long as you have qouta you can make a release, it will pick it up and build for it
+
+## CircleCI
+1. Sign up to [CircleCI](https://circleci.com/)
+2. When you fork the repo on GitHub, in CircleCI go to Projects and on the forked repo click Set Up, keep the option on "Select your config.yml file" to "Fatest" to use the config from the repo and click Set Up Project
+3. After that, make a [GitHub Classic Token](https://github.com/settings/tokens/new) with the repo scope selected
+4. Copy the token, then go back to your projects, click the 3 dots on your `paper-templates` fork, click "Project Settings" then go to "Environment Variables", click "Add" and name it `GH_TOKEN` or `GITHUB_TOKEN` (and its value is what you just copied)
+5. You're done, now after you do a release of the version (or push it), it will do its job
