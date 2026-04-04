@@ -60,29 +60,45 @@ jobs:
           command: |
             cd Kotlin
             chmod +x gradlew
-            ./gradlew build --no-daemon -Dorg.gradle.java.home=/opt/jdk --stacktrace || echo "KOTLIN_BUILD_FAILED=1" >> $BASH_ENV
+            echo "DEBUG: Gradle version and JVM for Kotlin build:"
+            ./gradlew --version 2>&1 | head -n 5
+            if ./gradlew build --no-daemon -Dorg.gradle.java.home=/opt/jdk --stacktrace; then
+              echo "KOTLIN_BUILD_FAILED=0" >> $BASH_ENV
+            else
+              echo "KOTLIN_BUILD_FAILED=1" >> $BASH_ENV
+            fi
 
       - run:
           name: Test Java Build
           command: |
             cd Java
             chmod +x gradlew
-            ./gradlew build --no-daemon -Dorg.gradle.java.home=/opt/jdk --stacktrace || echo "JAVA_BUILD_FAILED=1" >> $BASH_ENV
+            echo "DEBUG: Gradle version and JVM for Java build:"
+            ./gradlew --version 2>&1 | head -n 5
+            if ./gradlew build --no-daemon -Dorg.gradle.java.home=/opt/jdk --stacktrace; then
+              echo "JAVA_BUILD_FAILED=0" >> $BASH_ENV
+            else
+              echo "JAVA_BUILD_FAILED=1" >> $BASH_ENV
+            fi
 
       - run:
           name: Handle GitHub Issue
           when: always
           command: |
             if ! command -v gh &> /dev/null; then
+              echo "DEBUG: Installing gh CLI"
               curl -sSL https://github.com/cli/cli/releases/download/v2.46.0/gh_2.46.0_linux_amd64.tar.gz | tar xz --strip-components=1 -C /tmp
               sudo mv /tmp/bin/gh /usr/local/bin/
             fi
             if [ "$KOTLIN_BUILD_FAILED" = "1" ] || [ "$JAVA_BUILD_FAILED" = "1" ] || [ "$WRAPPER_UPDATE_FAILED" = "1" ]; then
+              FAILURE_STAGE="Unknown"
+              [ "$KOTLIN_BUILD_FAILED" = "1" ] && FAILURE_STAGE="Kotlin build"
+              [ "$JAVA_BUILD_FAILED" = "1" ] && FAILURE_STAGE="Java build"
               TITLE="Build failure for Paper Template ${MC_VERSION} (tag ${CIRCLE_TAG})"
-              BODY="Build failed."
+              BODY="**Failure stage:** ${FAILURE_STAGE}\n\n**Gradle & JVM info:**\n\`\`\`\n$(./gradlew --version 2>&1 | head -n 5)\n\`\`\`\n\n**Kotlin build log:**\n\`\`\`\n$(tail -n 50 ../Kotlin/kotlin-build.log || echo 'No Kotlin log')\n\`\`\`\n\n**Java build log:**\n\`\`\`\n$(tail -n 50 ../Java/java-build.log || echo 'No Java log')\n\`\`\`\n\nFull logs are available in CircleCI."
               EXISTING=$(gh issue list --state open --search "${TITLE}" --json number -q '.[0].number' || echo "")
               if [ -n "$EXISTING" ]; then
-                gh issue comment "$EXISTING" --body "Build failed again."
+                gh issue comment "$EXISTING" --body "$BODY"
               else
                 gh issue create --title "$TITLE" --body "$BODY" --assignee huhuhuhuheh
               fi
