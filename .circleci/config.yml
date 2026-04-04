@@ -20,6 +20,20 @@ jobs:
             elif [[ $(echo -e "$VER\n1.17" | sort -V | head -n1) == "1.17" ]]; then
               JAVA_VER=16
             fi
+            echo "DEBUG: CIRCLE_TAG=$CIRCLE_TAG"
+            echo "DEBUG: Initial MC_VERSION=$VER"
+            echo "DEBUG: JAVA_VERSION=$JAVA_VER"
+            UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0"
+            echo "DEBUG: Checking PaperMC API for version $VER"
+            if ! curl -s -H "User-Agent: $UA" "https://api.papermc.io/v2/projects/paper/versions/${VER}" | grep -q '"version"'; then
+              echo "DEBUG: Version $VER not found on PaperMC API. Fetching latest available version..."
+              LATEST=$(curl -s -H "User-Agent: $UA" "https://api.papermc.io/v2/projects/paper" | grep -o '"[0-9][0-9.]*"' | tail -1 | tr -d '"')
+              echo "DEBUG: Latest PaperMC version: $LATEST"
+              VER=$LATEST
+            else
+              echo "DEBUG: Version $VER confirmed on PaperMC."
+            fi
+            echo "DEBUG: Final MC_VERSION=$VER"
             echo "export JAVA_VERSION=$JAVA_VER" >> $BASH_ENV
             echo "export MC_VERSION=$VER" >> $BASH_ENV
       - run:
@@ -31,6 +45,7 @@ jobs:
             sed -i "s/def targetJavaVersion = [0-9]*/def targetJavaVersion = ${JAVA_VERSION}/" Java/build.gradle
             sed -i "s/paper-api:[0-9.]*-R0.1-SNAPSHOT/paper-api:${MC_VERSION}-R0.1-SNAPSHOT/" Java/build.gradle
             sed -i "s/minecraftVersion(\"[0-9.]*\")/minecraftVersion(\"${MC_VERSION}\")/" Java/build.gradle
+            echo "DEBUG: Build files updated with MC_VERSION=${MC_VERSION} JAVA_VERSION=${JAVA_VERSION}"
       - run:
           name: Setup Java
           command: |
@@ -39,7 +54,8 @@ jobs:
             else
               URL="https://api.adoptium.net/v3/binary/latest/${JAVA_VERSION}/ga/linux/x64/jdk/hotspot/normal/eclipse"
             fi
-            wget -qO jdk.tar.gz "$URL"
+            echo "DEBUG: JDK URL = $URL"
+            wget --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0" -qO jdk.tar.gz "$URL"
             sudo mkdir -p /opt/jdk
             sudo tar -xzf jdk.tar.gz -C /opt/jdk --strip-components=1
             echo 'export JAVA_HOME="/opt/jdk"' >> $BASH_ENV
@@ -64,10 +80,11 @@ jobs:
             echo "- **Game Version:** ${MC_VERSION}" >> release_notes.txt
             echo "- **Java Version:** ${JAVA_VERSION}" >> release_notes.txt
             echo "" >> release_notes.txt
-            echo "🔗 [Minecraft Wiki](https://minecraft.wiki/w/Java_Edition_${MC_VERSION})" >> release_notes.txt
+            echo "Minecraft Wiki: https://minecraft.wiki/w/Java_Edition_${MC_VERSION}" >> release_notes.txt
             
             if ! command -v gh &> /dev/null; then
-              curl -sSL https://github.com/cli/cli/releases/download/v2.46.0/gh_2.46.0_linux_amd64.tar.gz | tar xz --strip-components=1 -C /tmp
+              echo "DEBUG: Installing gh CLI"
+              curl -sSL -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0" https://github.com/cli/cli/releases/download/v2.46.0/gh_2.46.0_linux_amd64.tar.gz | tar xz --strip-components=1 -C /tmp
               sudo mv /tmp/bin/gh /usr/local/bin/
             fi
             if gh release view "$CIRCLE_TAG" &> /dev/null; then
@@ -86,4 +103,4 @@ workflows:
             branches:
               ignore: /.*/
             tags:
-              only: /^v.*/
+              only: /^v?[0-9].*$/
