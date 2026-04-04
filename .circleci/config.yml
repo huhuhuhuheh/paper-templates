@@ -51,6 +51,9 @@ jobs:
             echo "Updated: Java/build.gradle (paper-api)"
             sed -i "s/minecraftVersion(\"[0-9.]*\")/minecraftVersion(\"${MC_VERSION}\")/" Java/build.gradle
             echo "Updated: Java/build.gradle (minecraftVersion)"
+            sed -i 's/kotlin("jvm") version "[^"]*"/kotlin("jvm") version "2.3.20"/' Kotlin/build.gradle.kts || true
+            sed -i 's/id("org.jetbrains.kotlin.jvm") version "[^"]*"/id("org.jetbrains.kotlin.jvm") version "2.3.20"/' Kotlin/build.gradle.kts || true
+            echo "Updated: Kotlin/build.gradle.kts (kotlin plugin to 2.3.20)"
             echo "DEBUG: Build files updated with MC_VERSION=${MC_VERSION} JAVA_VERSION=${JAVA_VERSION}"
       - run:
           name: Setup Java
