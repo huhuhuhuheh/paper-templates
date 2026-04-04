@@ -30,7 +30,7 @@ jobs:
       - run:
           name: Update Build Files
           command: |
-            sed -i "s/val targetJavaVersion = [0-9]*/val targetJavaVersion = ${JAVA_VERSION}/" Kotlin/build.gradle.kts
+            sed -i "s/val targetJavaVersion =[0-9]*/val targetJavaVersion = ${JAVA_VERSION}/" Kotlin/build.gradle.kts
             sed -i "s/def targetJavaVersion = [0-9]*/def targetJavaVersion = ${JAVA_VERSION}/" Java/build.gradle
             sed -i "s/paper-api:[0-9.]*-R0.1-SNAPSHOT/paper-api:${MC_VERSION}-R0.1-SNAPSHOT/" Kotlin/build.gradle.kts
             sed -i "s/paper-api:[0-9.]*-R0.1-SNAPSHOT/paper-api:${MC_VERSION}-R0.1-SNAPSHOT/" Java/build.gradle
@@ -44,10 +44,10 @@ jobs:
           name: Setup Bootstrap Java
           command: |
             BOOTSTRAP_JAVA=22
-            if [ "$JAVA_VERSION" != "25" ]; then
+            if[ "$JAVA_VERSION" != "25" ]; then
               BOOTSTRAP_JAVA="$JAVA_VERSION"
             fi
-            if [ "$BOOTSTRAP_JAVA" = "16" ]; then
+            if[ "$BOOTSTRAP_JAVA" = "16" ]; then
               URL="https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_linux_hotspot_16.0.2_7.tar.gz"
             else
               URL="https://api.adoptium.net/v3/binary/latest/${BOOTSTRAP_JAVA}/ga/linux/x64/jdk/hotspot/normal/eclipse"
@@ -82,7 +82,7 @@ jobs:
       - run:
           name: Setup Target Java
           command: |
-            if [ "$JAVA_VERSION" = "16" ]; then
+            if[ "$JAVA_VERSION" = "16" ]; then
               URL="https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_linux_hotspot_16.0.2_7.tar.gz"
             else
               URL="https://api.adoptium.net/v3/binary/latest/${JAVA_VERSION}/ga/linux/x64/jdk/hotspot/normal/eclipse"
@@ -134,7 +134,7 @@ jobs:
             JAVA_BUILD_FAILED="${JAVA_BUILD_FAILED:-0}"
             WRAPPER_UPDATE_FAILED="${WRAPPER_UPDATE_FAILED:-0}"
 
-            if [ "$KOTLIN_BUILD_FAILED" = "1" ] || [ "$JAVA_BUILD_FAILED" = "1" ] || [ "$WRAPPER_UPDATE_FAILED" = "1" ]; then
+            if [ "$KOTLIN_BUILD_FAILED" = "1" ] ||[ "$JAVA_BUILD_FAILED" = "1" ] ||[ "$WRAPPER_UPDATE_FAILED" = "1" ]; then
               TITLE="Build failure for Paper Template ${MC_VERSION} (tag ${CIRCLE_TAG})"
 
               WRAPPER_LOG=""
@@ -146,33 +146,37 @@ jobs:
                 WRAPPER_LOG="No wrapper-update log"
               fi
 
-              BODY="**Failure stage:** ${FAILURE_STAGE}
-
-**Gradle & JVM info:**
-\`\`\`
-Kotlin gradlew debug:
-$(cat kotlin-gradlew-debug.log 2>/dev/null || echo 'No Kotlin gradlew debug')
-
-Java gradlew debug:
-$(cat java-gradlew-debug.log 2>/dev/null || echo 'No Java gradlew debug')
-\`\`\`
-
-**Wrapper update log:**
-\`\`\`
-${WRAPPER_LOG}
-\`\`\`
-
-**Kotlin build log:**
-\`\`\`
-$(tail -50 kotlin-build.log 2>/dev/null || echo 'No Kotlin log')
-\`\`\`
-
-**Java build log:**
-\`\`\`
-$(tail -50 java-build.log 2>/dev/null || echo 'No Java log')
-\`\`\`
-
-Full logs are available in CircleCI."
+              {
+                echo "**Failure stage:** ${FAILURE_STAGE}"
+                echo ""
+                echo "**Gradle & JVM info:**"
+                echo '```'
+                echo "Kotlin gradlew debug:"
+                cat kotlin-gradlew-debug.log 2>/dev/null || echo 'No Kotlin gradlew debug'
+                echo ""
+                echo "Java gradlew debug:"
+                cat java-gradlew-debug.log 2>/dev/null || echo 'No Java gradlew debug'
+                echo '```'
+                echo ""
+                echo "**Wrapper update log:**"
+                echo '```'
+                echo "${WRAPPER_LOG}"
+                echo '```'
+                echo ""
+                echo "**Kotlin build log:**"
+                echo '```'
+                tail -50 kotlin-build.log 2>/dev/null || echo 'No Kotlin log'
+                echo '```'
+                echo ""
+                echo "**Java build log:**"
+                echo '```'
+                tail -50 java-build.log 2>/dev/null || echo 'No Java log'
+                echo '```'
+                echo ""
+                echo "Full logs are available in CircleCI."
+              } > issue_body.txt
+              
+              BODY=$(cat issue_body.txt)
 
               EXISTING=$(gh issue list --state open --search "${TITLE}" --json number -q '.[0].number' || echo "")
               if [ -n "$EXISTING" ]; then
