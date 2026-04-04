@@ -51,9 +51,12 @@ jobs:
             echo "Updated: Java/build.gradle (paper-api)"
             sed -i "s/minecraftVersion(\"[0-9.]*\")/minecraftVersion(\"${MC_VERSION}\")/" Java/build.gradle
             echo "Updated: Java/build.gradle (minecraftVersion)"
-            sed -i 's/kotlin("jvm") version "[^"]*"/kotlin("jvm") version "2.3.20"/' Kotlin/build.gradle.kts || true
-            sed -i 's/id("org.jetbrains.kotlin.jvm") version "[^"]*"/id("org.jetbrains.kotlin.jvm") version "2.3.20"/' Kotlin/build.gradle.kts || true
-            echo "Updated: Kotlin/build.gradle.kts (kotlin plugin to 2.3.20)"
+            if [ "$JAVA_VERSION" = "25" ]; then
+              sed -i 's/kotlin("jvm") version "[^"]*"/kotlin("jvm") version "2.3.20"/' Kotlin/build.gradle.kts || true
+              echo "Updated: Kotlin/build.gradle.kts (kotlin plugin to 2.3.20 because JAVA_VERSION=25)"
+            else
+              echo "Skipped: Kotlin plugin version (JAVA_VERSION is not 25)"
+            fi
             echo "DEBUG: Build files updated with MC_VERSION=${MC_VERSION} JAVA_VERSION=${JAVA_VERSION}"
       - run:
           name: Setup Java
@@ -81,7 +84,10 @@ jobs:
             chmod +x gradlew
             echo "DEBUG: Java version right before Kotlin build:"
             /opt/jdk/bin/java -version
-            ./gradlew build --no-daemon -Dorg.gradle.java.home=/opt/jdk --stacktrace
+            ./gradlew build --no-daemon -Dorg.gradle.java.home=/opt/jdk --stacktrace 2>&1 | tee kotlin-build.log
+            if [ ${PIPESTATUS[0]} -ne 0 ]; then
+              echo "KOTLIN_BUILD_FAILED=1" >> $BASH_ENV
+            fi
       - run:
           name: Test Java Build
           command: |
@@ -89,7 +95,33 @@ jobs:
             chmod +x gradlew
             echo "DEBUG: Java version right before Java build:"
             /opt/jdk/bin/java -version
-            ./gradlew build --no-daemon -Dorg.gradle.java.home=/opt/jdk --stacktrace
+            ./gradlew build --no-daemon -Dorg.gradle.java.home=/opt/jdk --stacktrace 2>&1 | tee java-build.log
+            if [ ${PIPESTATUS[0]} -ne 0 ]; then
+              echo "JAVA_BUILD_FAILED=1" >> $BASH_ENV
+            fi
+      - run:
+          name: Handle GitHub Issue
+          when: always
+          command: |
+            if [ "$KOTLIN_BUILD_FAILED" = "1" ] || [ "$JAVA_BUILD_FAILED" = "1" ]; then
+              echo "DEBUG: Build failed - creating/updating GitHub issue"
+              TITLE="Build failure for Paper Template ${MC_VERSION} (tag ${CIRCLE_TAG})"
+              BODY="**Game Version:** ${MC_VERSION}\n**Java Version:** ${JAVA_VERSION}\n\nGradle build failed.\n\n### Kotlin build log (last 50 lines)\n\`\`\`\n$(tail -50 kotlin-build.log 2>/dev/null || echo 'No log available')\n\`\`\`\n\n### Java build log (last 50 lines)\n\`\`\`\n$(tail -50 java-build.log 2>/dev/null || echo 'No log available')\n\`\`\`\n\nFull logs in CircleCI job."
+              EXISTING=$(gh issue list --state open --search "${TITLE}" --json number -q '.[0].number' || echo "")
+              if [ -n "$EXISTING" ]; then
+                gh issue comment "$EXISTING" --body "Build failed again with same error."
+              else
+                gh issue create --title "$TITLE" --body "$BODY" --assignee huhuhuhuheh
+              fi
+            else
+              echo "DEBUG: Build succeeded - closing any open issue"
+              TITLE="Build failure for Paper Template ${MC_VERSION} (tag ${CIRCLE_TAG})"
+              EXISTING=$(gh issue list --state open --search "${TITLE}" --json number -q '.[0].number' || echo "")
+              if [ -n "$EXISTING" ]; then
+                gh issue comment "$EXISTING" --body "✅ Build now succeeds for ${MC_VERSION} (Java ${JAVA_VERSION}). Closing issue."
+                gh issue close "$EXISTING" --reason completed
+              fi
+            fi
       - run:
           name: Zip Templates
           command: |
