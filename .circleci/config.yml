@@ -80,7 +80,7 @@ jobs:
             echo "- **Game Version:** ${MC_VERSION}" >> release_notes.txt
             echo "- **Java Version:** ${JAVA_VERSION}" >> release_notes.txt
             echo "" >> release_notes.txt
-            echo "Minecraft Wiki: https://minecraft.wiki/w/Java_Edition_${MC_VERSION}" >> release_notes.txt
+            echo "🔗 [Minecraft Wiki](https://minecraft.wiki/w/Java_Edition_${MC_VERSION})" >> release_notes.txt
             
             if ! command -v gh &> /dev/null; then
               echo "DEBUG: Installing gh CLI"
