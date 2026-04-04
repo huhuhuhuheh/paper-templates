@@ -6,6 +6,7 @@ jobs:
       - image: cimg/base:current
     steps:
       - checkout
+
       - run:
           name: Determine Versions
           command: |
@@ -36,17 +37,18 @@ jobs:
             echo "DEBUG: Final MC_VERSION=$VER"
             echo "export JAVA_VERSION=$JAVA_VER" >> $BASH_ENV
             echo "export MC_VERSION=$VER" >> $BASH_ENV
+
       - run:
           name: Update Build Files
           command: |
             sed -i "s/val targetJavaVersion = [0-9]*/val targetJavaVersion = ${JAVA_VERSION}/" Kotlin/build.gradle.kts
-            echo "Updated: Kotlin/build.gradle.kts"
+            echo "Updated: Kotlin/build.gradle.kts (targetJavaVersion)"
             sed -i "s/paper-api:[0-9.]*-R0.1-SNAPSHOT/paper-api:${MC_VERSION}-R0.1-SNAPSHOT/" Kotlin/build.gradle.kts
             echo "Updated: Kotlin/build.gradle.kts (paper-api)"
             sed -i "s/minecraftVersion(\"[0-9.]*\")/minecraftVersion(\"${MC_VERSION}\")/" Kotlin/build.gradle.kts
             echo "Updated: Kotlin/build.gradle.kts (minecraftVersion)"
             sed -i "s/def targetJavaVersion = [0-9]*/def targetJavaVersion = ${JAVA_VERSION}/" Java/build.gradle
-            echo "Updated: Java/build.gradle"
+            echo "Updated: Java/build.gradle (targetJavaVersion)"
             sed -i "s/paper-api:[0-9.]*-R0.1-SNAPSHOT/paper-api:${MC_VERSION}-R0.1-SNAPSHOT/" Java/build.gradle
             echo "Updated: Java/build.gradle (paper-api)"
             sed -i "s/minecraftVersion(\"[0-9.]*\")/minecraftVersion(\"${MC_VERSION}\")/" Java/build.gradle
@@ -58,6 +60,7 @@ jobs:
               echo "Skipped: Kotlin plugin version (JAVA_VERSION is not 25)"
             fi
             echo "DEBUG: Build files updated with MC_VERSION=${MC_VERSION} JAVA_VERSION=${JAVA_VERSION}"
+
       - run:
           name: Setup Java
           command: |
@@ -77,6 +80,16 @@ jobs:
             echo "DEBUG: JAVA_HOME and PATH exported"
             echo "DEBUG: Java version installed:"
             /opt/jdk/bin/java -version 2>&1 | head -n 3
+
+      - run:
+          name: Update Gradle Wrapper to 9.1.0
+          command: |
+            cd Kotlin
+            ./gradlew wrapper --gradle-version=9.1.0 --distribution-type=bin
+            cd ../Java
+            ./gradlew wrapper --gradle-version=9.1.0 --distribution-type=bin
+            cd ..
+
       - run:
           name: Test Kotlin Build
           command: |
@@ -88,6 +101,7 @@ jobs:
             if [ ${PIPESTATUS[0]} -ne 0 ]; then
               echo "KOTLIN_BUILD_FAILED=1" >> $BASH_ENV
             fi
+
       - run:
           name: Test Java Build
           command: |
@@ -99,6 +113,7 @@ jobs:
             if [ ${PIPESTATUS[0]} -ne 0 ]; then
               echo "JAVA_BUILD_FAILED=1" >> $BASH_ENV
             fi
+
       - run:
           name: Handle GitHub Issue
           when: always
@@ -122,6 +137,7 @@ jobs:
                 gh issue close "$EXISTING" --reason completed
               fi
             fi
+
       - run:
           name: Zip Templates
           command: |
@@ -129,6 +145,7 @@ jobs:
             zip -r ../paper-${MC_VERSION}-Java.zip . -x "build/*" ".gradle/*"
             cd ../Kotlin
             zip -r ../paper-${MC_VERSION}-Kotlin.zip . -x "build/*" ".gradle/*"
+
       - run:
           name: Update Release Assets
           command: |
