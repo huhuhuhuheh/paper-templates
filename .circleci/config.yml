@@ -40,11 +40,17 @@ jobs:
           name: Update Build Files
           command: |
             sed -i "s/val targetJavaVersion = [0-9]*/val targetJavaVersion = ${JAVA_VERSION}/" Kotlin/build.gradle.kts
+            echo "Updated: Kotlin/build.gradle.kts"
             sed -i "s/paper-api:[0-9.]*-R0.1-SNAPSHOT/paper-api:${MC_VERSION}-R0.1-SNAPSHOT/" Kotlin/build.gradle.kts
+            echo "Updated: Kotlin/build.gradle.kts (paper-api)"
             sed -i "s/minecraftVersion(\"[0-9.]*\")/minecraftVersion(\"${MC_VERSION}\")/" Kotlin/build.gradle.kts
+            echo "Updated: Kotlin/build.gradle.kts (minecraftVersion)"
             sed -i "s/def targetJavaVersion = [0-9]*/def targetJavaVersion = ${JAVA_VERSION}/" Java/build.gradle
+            echo "Updated: Java/build.gradle"
             sed -i "s/paper-api:[0-9.]*-R0.1-SNAPSHOT/paper-api:${MC_VERSION}-R0.1-SNAPSHOT/" Java/build.gradle
+            echo "Updated: Java/build.gradle (paper-api)"
             sed -i "s/minecraftVersion(\"[0-9.]*\")/minecraftVersion(\"${MC_VERSION}\")/" Java/build.gradle
+            echo "Updated: Java/build.gradle (minecraftVersion)"
             echo "DEBUG: Build files updated with MC_VERSION=${MC_VERSION} JAVA_VERSION=${JAVA_VERSION}"
       - run:
           name: Setup Java
@@ -56,16 +62,21 @@ jobs:
             fi
             echo "DEBUG: JDK URL = $URL"
             wget --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0" -qO jdk.tar.gz "$URL"
+            echo "DEBUG: Download finished (exit code $?)"
             sudo mkdir -p /opt/jdk
             sudo tar -xzf jdk.tar.gz -C /opt/jdk --strip-components=1
+            echo "DEBUG: Extraction finished (exit code $?)"
             echo 'export JAVA_HOME="/opt/jdk"' >> $BASH_ENV
             echo 'export PATH="/opt/jdk/bin:$PATH"' >> $BASH_ENV
+            echo "DEBUG: JAVA_HOME and PATH exported"
+            echo "DEBUG: Java version check:"
+            /opt/jdk/bin/java -version 2>&1 | head -n 3
       - run:
           name: Test Kotlin Build
-          command: cd Kotlin && chmod +x gradlew && ./gradlew build
+          command: cd Kotlin && chmod +x gradlew && JAVA_HOME=/opt/jdk ./gradlew build --no-daemon
       - run:
           name: Test Java Build
-          command: cd Java && chmod +x gradlew && ./gradlew build
+          command: cd Java && chmod +x gradlew && JAVA_HOME=/opt/jdk ./gradlew build --no-daemon
       - run:
           name: Zip Templates
           command: |
