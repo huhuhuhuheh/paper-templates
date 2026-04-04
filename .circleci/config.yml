@@ -69,14 +69,24 @@ jobs:
             echo 'export JAVA_HOME="/opt/jdk"' >> $BASH_ENV
             echo 'export PATH="/opt/jdk/bin:$PATH"' >> $BASH_ENV
             echo "DEBUG: JAVA_HOME and PATH exported"
-            echo "DEBUG: Java version check:"
+            echo "DEBUG: Java version installed:"
             /opt/jdk/bin/java -version 2>&1 | head -n 3
       - run:
           name: Test Kotlin Build
-          command: cd Kotlin && chmod +x gradlew && JAVA_HOME=/opt/jdk ./gradlew build --no-daemon
+          command: |
+            cd Kotlin
+            chmod +x gradlew
+            echo "DEBUG: Java version right before Kotlin build:"
+            /opt/jdk/bin/java -version
+            ./gradlew build --no-daemon -Dorg.gradle.java.home=/opt/jdk --stacktrace
       - run:
           name: Test Java Build
-          command: cd Java && chmod +x gradlew && JAVA_HOME=/opt/jdk ./gradlew build --no-daemon
+          command: |
+            cd Java
+            chmod +x gradlew
+            echo "DEBUG: Java version right before Java build:"
+            /opt/jdk/bin/java -version
+            ./gradlew build --no-daemon -Dorg.gradle.java.home=/opt/jdk --stacktrace
       - run:
           name: Zip Templates
           command: |
