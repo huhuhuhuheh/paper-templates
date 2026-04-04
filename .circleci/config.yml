@@ -25,13 +25,13 @@ jobs:
             echo "DEBUG: JAVA_VERSION=$JAVA_VER"
             UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0"
             echo "DEBUG: Checking PaperMC API for version $VER"
-            if ! curl -s -H "User-Agent: $UA" "https://api.papermc.io/v2/projects/paper/versions/${VER}" | grep -q '"version"'; then
+            if curl -s -H "User-Agent: $UA" "https://fill.papermc.io/v3/projects/paper/versions/${VER}" | grep -q '"version"'; then
+              echo "DEBUG: Version $VER confirmed on PaperMC."
+            else
               echo "DEBUG: Version $VER not found on PaperMC API. Fetching latest available version..."
-              LATEST=$(curl -s -H "User-Agent: $UA" "https://api.papermc.io/v2/projects/paper" | grep -o '"[0-9][0-9.]*"' | tail -1 | tr -d '"')
+              LATEST=$(curl -s -H "User-Agent: $UA" "https://fill.papermc.io/v3/projects/paper" | grep -o '"[0-9][0-9.]*"' | tr -d '"' | sort -V | tail -1)
               echo "DEBUG: Latest PaperMC version: $LATEST"
               VER=$LATEST
-            else
-              echo "DEBUG: Version $VER confirmed on PaperMC."
             fi
             echo "DEBUG: Final MC_VERSION=$VER"
             echo "export JAVA_VERSION=$JAVA_VER" >> $BASH_ENV
